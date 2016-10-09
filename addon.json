@@ -1,0 +1,9 @@
+{
+	"title"		:	"gm-discordlib",
+	"type"		:	"ServerContent",
+	"tags"		:	[ "fun", "build" ],
+	"ignore"	:
+	[
+
+	],
+}
