@@ -1,7 +1,7 @@
-/*
+--[[
 Discord Library for Garry's Mod by Datamats
 Check the README.md and LICENSE file for more infomation.
-*/
+]]
 
 discord = discord or {}
 

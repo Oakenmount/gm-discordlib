@@ -1,7 +1,7 @@
-/*
+--[[
 	Credits to HunterNL for this awesome websockets library. It has been slightly stripped down for this addon
 	Check it out at https://github.com/HunterNL/Gmod-Websockets
-*/
+]]
 
 
 if CLIENT then return end
