@@ -1,6 +1,6 @@
 Garry's Mod Discord Library
 ============
-**Note: This is highly experimental, use on own caution! This might now even work or it will break your stuff!**
+**Note: This is highly experimental, use on own caution! This might not even work or it will break your stuff!**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Discord](https://discordapp.com/api/guilds/128871478019096576/embed.png)](https://discord.gg/vxCPtfK)
@@ -13,11 +13,12 @@ Download it either as a zip or clone it with git and then copy it to garrysmod/a
 
 ## Example Usage
 ```lua
+
 if bot and bot:IsConnected() then
-	bot:Disconnect()
+    bot:Disconnect()
 end
 
-bot = discord:CreateClient()
+bot = discordlib:CreateClient()
 bot:Login("<token>")
 
 bot:on("ready", function()

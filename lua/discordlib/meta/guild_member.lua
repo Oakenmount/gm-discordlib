@@ -1,13 +1,13 @@
-discord.guild_member_meta = discord.guild_member_meta or {}
+discordlib.guild_member_meta = discordlib.guild_member_meta or {}
 
-discord.guild_member_meta.__index = discord.guild_member_meta
+discordlib.guild_member_meta.__index = discordlib.guild_member_meta
 
-function discord.guild_member_meta:ParseGuildMemberObj(tbl)
+function discordlib.guild_member_meta:ParseGuildMemberObj(tbl)
 
-	local self = setmetatable({}, discord.guild_member_meta)
+	local self = setmetatable({}, discordlib.guild_member_meta)
 
 	self.client = tbl.client
-	self.user = discord.user_meta:ParseUserObj(tbl.user)
+	self.user = discordlib.user_meta:ParseUserObj(tbl.user)
 	self.nick =	tbl.nick
 	self.joined_at = tbl.joined_at
 	self.deaf = tbl.deaf
@@ -19,7 +19,7 @@ function discord.guild_member_meta:ParseGuildMemberObj(tbl)
 
 end
 
-function discord.guild_member_meta:IsInRole(id)
+function discordlib.guild_member_meta:IsInRole(id)
 	for k, role in pairs(self.roles) do
 		if role.id == id then
 			return true
@@ -28,11 +28,11 @@ function discord.guild_member_meta:IsInRole(id)
 	return false
 end
 
-function discord.guild_member_meta:GetRoles()
+function discordlib.guild_member_meta:GetRoles()
 	return self.roles
 end
 
-function discord.guild_member_meta:__ParseRoles(roles)
+function discordlib.guild_member_meta:__ParseRoles(roles)
 	self.roles = {}
 	for k, v in pairs(roles) do
 		local role = self.client:GetRoleById(v)

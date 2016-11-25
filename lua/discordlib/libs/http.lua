@@ -3,7 +3,7 @@
 		https://github.com/Bromvlieg/gm_bromsock/blob/master/Lua_examples/httprequest.lua
 ]]
 
-function discord.HTTPRequest(url, method, headertbl, postdatatbl, patchdata, callback)
+function discordlib.HTTPRequest(url, method, headertbl, postdatatbl, patchdata, callback)
 	local port = 80
 
 	if (string.StartWith(url, "http://")) then

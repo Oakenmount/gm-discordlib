@@ -3,10 +3,7 @@
 	Check it out at https://github.com/HunterNL/Gmod-Websockets
 ]]
 
-
 if CLIENT then return end
-
-print("Websockets loaded")
 
 require( "bromsock" );
 include("sha1.lua")
@@ -17,7 +14,6 @@ if
 	not WS
 then
 	WS = {}
-	discord.WS = WS
 	WS.__index = WS
 
 	WS.Client = {}
@@ -1102,3 +1098,5 @@ function WS:fireEvent(eventName,...)
 		v(...)
 	end
 end
+
+discordlib.WS = WS

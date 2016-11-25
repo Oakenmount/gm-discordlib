@@ -3,18 +3,18 @@ Discord Library for Garry's Mod by Datamats
 Check the README.md and LICENSE file for more infomation.
 ]]
 
-discord = discord or {}
+discordlib = discordlib or {}
 
-discord.__index = discord
+discordlib.__index = discordlib
 
-discord.currid = discord.currid or 1
+discordlib.currid = discordlib.currid or 1
 
-discord.endpoints = {}
-discord.endpoints.base = "https://discordapp.com/api"
-discord.endpoints.gateway = "wss://gateway.discord.gg/"
-discord.endpoints.users = discord.endpoints.base.."/users"
-discord.endpoints.guilds = discord.endpoints.base.."/guilds"
-discord.endpoints.channels = discord.endpoints.base.."/channels"
+discordlib.endpoints = {}
+discordlib.endpoints.base = "https://discordapp.com/api"
+discordlib.endpoints.gateway = "wss://gateway.discord.gg/"
+discordlib.endpoints.users = discordlib.endpoints.base.."/users"
+discordlib.endpoints.guilds = discordlib.endpoints.base.."/guilds"
+discordlib.endpoints.channels = discordlib.endpoints.base.."/channels"
 
 local rateLimiter = {}
 
@@ -29,24 +29,24 @@ include('meta/guild.lua')
 include('meta/guild_member.lua')
 
 
+function discordlib:CreateClient()
 
-function discord:CreateClient()
-
-	local self = setmetatable({}, discord)
+	local self = setmetatable({}, discordlib)
 
 	-- Generate new id used for heartbeat timer etc probably a more elegant way to do this
-	discord.currid = discord.currid +1
-	self.cid = discord.currid
+	discordlib.currid = discordlib.currid +1
+	self.cid = discordlib.currid
 
 	self.autoreconnect = true -- Let's make this the default
 
+	self.debug = false
 	self.events = {}
-	-- Let's cache basic guilds and roles data and update them on websocket event maybe a better way to do this? ¯\_(ツ)_/¯
+	-- Let's cache basic guilds and roles data and update them on websocket event ,maybe a better way to do this? ¯\_(ツ)_/¯
 	self.guilds = {}
 
 	rateLimiter[self.cid] = {}
 
-	self.ws = self.WS.Client(discord.endpoints.gateway, 443)
+	self.ws = self.WS.Client(discordlib.endpoints.gateway, 443)
 
 	self.ws:on("open", function()
 			self:Auth()
@@ -64,19 +64,23 @@ function discord:CreateClient()
 	return self
 end
 
---Will add the token ad start the connection to the gateway
-function discord:Login(token)
+--Will add the token at the start for the connection to the gateway
+function discordlib:Login(token)
 	self.token = token
 	self.ws:Connect()
+
+	if self.debug then
+		print("DLib - Connecting / Loginin")
+	end
 end
 
 --If the websocket connection is still active
-function discord:IsConnected()
+function discordlib:IsConnected()
 	return self.ws and self.ws:IsActive()
 end
 
 --Disconnect the current session
-function discord:Disconnect()
+function discordlib:Disconnect()
 	if self:IsConnected() then
 		timer.Destroy("discordHeartbeat"..self.cid)
 		self.ws:Close()
@@ -85,36 +89,36 @@ function discord:Disconnect()
 end
 
 --Basic auth message for websocket
-function discord:Auth()
+function discordlib:Auth()
 	local payload = {
-		["op"] = 2,
-		["d"] = {
-			["token"] = self.token,
-		    ["properties"] = {
-		        ["$os"] = jit.os,
-		        ["$browser"] = "gm-discordlib",
-		        ["$device"] = "gm-discordlib",
-		        ["$referrer"] = "",
-		        ["$referring_domain"] = ""
-		    },
-		    ["compress"] = false,
-		    ["large_threshold"] = 100
-	    }
+			["op"] = 2,
+			["d"] = {
+				["token"] = self.token,
+			    	["properties"] = {
+			        	["$os"] = jit.os,
+			        	["$browser"] = "gm-discordlib",
+			        	["$device"] = "gm-discordlib",
+			        	["$referrer"] = "",
+			        	["$referring_domain"] = ""
+			},
+			["compress"] = false,
+			["large_threshold"] = 100
+		}
 	}
 	self.ws:Send(util.TableToJSON(payload))
 end
 
 -- Emit the heartbeant event
-function discord:Heartbeat()
-		local payload = {
-			["op"] = 1,
-			["d"] = os.time()
-		}
-		self.ws:Send(util.TableToJSON(payload))
+function discordlib:Heartbeat()
+	local payload = {
+		["op"] = 1,
+		["d"] = os.time()
+	}
+	self.ws:Send(util.TableToJSON(payload))
 end
 
 -- Make it emit the heartbeat websocket event every 20sec to not get disconnected
-function discord:StartHeartbeat()
+function discordlib:StartHeartbeat()
 	if not self.ws:IsActive() then
 		return false
 	end
@@ -127,55 +131,57 @@ function discord:StartHeartbeat()
 	end)
 end
 
-function discord:HandleMessage(msg)
+function discordlib:HandleMessage(msg)
 	local tbl = util.JSONToTable(msg)
 
 	tbl.d = tbl.d or {}
 	tbl.d.client = self
 
 	if tbl.t == "READY" then
-		self.bot = discord.user_meta:ParseUserObj(tbl.d.user)
+		self.bot = discordlib.user_meta:ParseUserObj(tbl.d.user)
 		self.id = tbl.d.user.id
 		self.username = tbl.d.user.username
 		self.session_id = tbl.d.session_id
 		self:fireEvent("ready")
 
 	elseif tbl.t == "MESSAGE_CREATE" then
-		self:fireEvent("message", discord.message_meta:ParseMessageCreate(tbl.d), self)
+		self:fireEvent("message", discordlib.message_meta:ParseMessageCreate(tbl.d), self)
 
 	elseif tbl.t == "GUILD_CREATE" then
-		local guild = discord.guild_meta:ParseGuildCreate(tbl.d)
+		local guild = discordlib.guild_meta:ParseGuildCreate(tbl.d)
 		self.guilds[guild.id] = guild
 
 	elseif tbl.t == "GUILD_MEMBER_ADD" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local guild_member = discord.guild_member_meta:ParseGuildMemberObj(tbl.d)
+		local guild_member = discordlib.guild_member_meta:ParseGuildMemberObj(tbl.d)
 		guild.members[guild_member.user.id] = guild_member
 
 	elseif tbl.t == "GUILD_MEMBER_REMOVE" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local userid = tbl.d.user.id
-		guild.members[userid] = nil
-
+		if guild then
+			guild.members[tbl.d.user.id] = nil
+		end
 	elseif tbl.t == "GUILD_MEMBER_ADD" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local member = discord.guild_member_meta:ParseGuildMemberObj(tbl.d)
+		local member = discordlib.guild_member_meta:ParseGuildMemberObj(tbl.d)
 		table.insert(guild.members, member)
 
 	elseif tbl.t == "GUILD_MEMBER_UPDATE" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
 		local userid = tbl.d.user.id
-		guild.members[userid].user = discord.user_meta:ParseUserObj(tbl.d.user)
+		guild.members[userid].user = discordlib.user_meta:ParseUserObj(tbl.d.user)
 
 		guild.members[userid].roles = {}
 		for k, v in pairs(tbl.d.roles) do
 			local role = self:GetRoleById(v)
-			table.insert(guild.members[userid].roles, role)
+			if role then
+				table.insert(guild.members[userid].roles, role)
+			end
 		end
 	end
 end
 
-function discord:GetChannelByChannelID(id)
+function discordlib:GetChannelByChannelID(id)
 	for k, guild in pairs(self.guilds) do
 		for k, channel in pairs(guild.channels) do
 			if channel.id == id then
@@ -186,7 +192,7 @@ function discord:GetChannelByChannelID(id)
 	return false
 end
 
-function discord:GetGuildByChannelID(id)
+function discordlib:GetGuildByChannelID(id)
 	for k, guild in pairs(self.guilds) do
 		for k, channel in pairs(guild.channels) do
 			if channel.id == id then
@@ -197,7 +203,7 @@ function discord:GetGuildByChannelID(id)
 	return false
 end
 
-function discord:GetGuildByGuildID(id)
+function discordlib:GetGuildByGuildID(id)
 	for k, guild in pairs(self.guilds) do
 		if guild.id == id then
 			return guild
@@ -207,7 +213,7 @@ function discord:GetGuildByGuildID(id)
 end
 
 
-function discord:GetRoleById(id)
+function discordlib:GetRoleById(id)
 	for k, guild in pairs(self.guilds) do
 		for k, role in pairs(guild.roles) do
 			if role.id == id then
@@ -218,54 +224,36 @@ function discord:GetRoleById(id)
 	return false
 end
 
-function discord:GetUserById(id, cb)
-	for k, guild in pairs(self.guilds) do
-		for k, role in pairs(guild.roles) do
-			if role.id == id then
-				return role
-			end
-		end
-	end
-	return false
-end
-
-function discord:APIRequest(url, method, posttbl, patchdata, callback)
+function discordlib:APIRequest(url, method, posttbl, patchdata, callback)
 	local headtbl = {["Authorization"]="Bot "..self.token, ["Content-Type"]="application/json"}
-	
 	self.HTTPRequest(url, method, headtbl, posttbl, patchdata, callback)
 end
 
-function discord:SendMessage(channelid, msg, cb)
+function discordlib:SendMessage(channelid, msg, cb)
 	local postTbl = {["content"] = msg}
 	self:RunAPIFunc("sendMessage", function()
-		self:APIRequest(discord.endpoints.channels.."/"..channelid.."/messages", "POST", postTbl, nil, function(headers, body)
+		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST", postTbl, nil, function(headers, body)
 			self:SetRateLimitHead("sendMessage", headers)
 			
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
 			tbl.client = self
-			cb(discord.message_meta:ParseMessageCreate(tbl, bot))
+			cb(discordlib.message_meta:ParseMessageCreate(tbl, bot))
 		end)
 	end)
 end
 
-end
-
-function discord:on(eventName,func)
+function discordlib:on(eventName,func)
 	self.events[eventName] = func
 end
 
-function discord:fireEvent(eventName,...)
+function discordlib:fireEvent(eventName,...)
 	local event = self.events[eventName] or false
 	if not event then return end
 	event(...)
 end
 
---The ratelimiter, it may need a rewrite in the future
-
-local lastRateLimit = 0
-
-function discord:RunAPIFunc(name, func)
+function discordlib:RunAPIFunc(name, func)
 	rateLimiter[self.cid] = rateLimiter[self.cid] or {}
 	rateLimiter[self.cid][name] = rateLimiter[self.cid][name] or {}
 	rateLimiter[self.cid][name].funcs = rateLimiter[self.cid][name].funcs or {}
@@ -273,16 +261,20 @@ function discord:RunAPIFunc(name, func)
 	table.insert(rateLimiter[self.cid][name].funcs, func)
 end
 
-function discord:SetRateLimitHead(name, headers)
+function discordlib:SetRateLimitHead(name, headers)
 	self:SetRateLimit(name, tonumber(headers["x-ratelimit-remaining"]) or 5, tonumber(headers["x-ratelimit-reset"]) or 5)
 end
 
-function discord:SetRateLimit(name, remaining, resetTime)
+function discordlib:SetRateLimit(name, remaining, resetTime)
 	rateLimiter[self.cid] = rateLimiter[self.cid] or {}
 	rateLimiter[self.cid][name] = rateLimiter[self.cid][name] or {}
 	rateLimiter[self.cid][name].Remaining = remaining
 	rateLimiter[self.cid][name].resetTime = resetTime
+end
 
+--The current ratelimiter, not very effective tho.
+
+local lastRateLimit = 0
 
 hook.Add("Think", "discordRatelimiter", function()
 

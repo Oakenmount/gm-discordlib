@@ -1,3 +1,3 @@
 if SERVER then
-	include( "discordlib/discord.lua" )
+	include( "discordlib/discordlib.lua" )
 end

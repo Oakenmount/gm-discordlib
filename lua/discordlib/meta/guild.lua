@@ -1,10 +1,10 @@
-discord.guild_meta = discord.guild_meta or {}
+discordlib.guild_meta = discordlib.guild_meta or {}
 
-discord.guild_meta.__index = discord.guild_meta
+discordlib.guild_meta.__index = discordlib.guild_meta
 
-function discord.guild_meta:ParseGuildCreate(tbl)
+function discordlib.guild_meta:ParseGuildCreate(tbl)
 
-	local self = setmetatable({}, discord.guild_meta)
+	local self = setmetatable({}, discordlib.guild_meta)
 
 	self.client = tbl.client
 	self.id = tbl.id
@@ -31,7 +31,7 @@ function discord.guild_meta:ParseGuildCreate(tbl)
 	self.members = {}
 
 	for k, v in pairs(tbl.roles) do
-		local role = discord.role_meta:ParseRoleObj(v)
+		local role = discordlib.role_meta:ParseRoleObj(v)
 		self.roles[role.id] = role
 	end
 
@@ -40,13 +40,13 @@ function discord.guild_meta:ParseGuildCreate(tbl)
 	for k, v in pairs(tbl.members or {}) do
 
 		v.client = self.client -- Pass it
-		local member = discord.guild_member_meta:ParseGuildMemberObj(v)
+		local member = discordlib.guild_member_meta:ParseGuildMemberObj(v)
 		self.members[member.user.id] = member
 	end
 
 
 	for k, v in pairs(tbl.channels or {}) do
-		local channel = discord.channel_meta:ParseChannelObj(v)
+		local channel = discordlib.channel_meta:ParseChannelObj(v)
 		self.channels[channel.id] = channel
 	end
 
