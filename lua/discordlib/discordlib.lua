@@ -11,7 +11,7 @@ discordlib.currid = discordlib.currid or 1
 
 discordlib.endpoints = {}
 discordlib.endpoints.base = "https://discordapp.com/api"
-discordlib.endpoints.gateway = "wss://gateway.discord.gg"
+discordlib.endpoints.gateway = "wss://gateway.discord.gg/?v=6"
 discordlib.endpoints.users = discordlib.endpoints.base.."/users"
 discordlib.endpoints.guilds = discordlib.endpoints.base.."/guilds"
 discordlib.endpoints.channels = discordlib.endpoints.base.."/channels"
@@ -44,7 +44,7 @@ function discordlib:CreateClient()
 	self.events = {}
 	-- Let's cache basic guilds and roles data and update them on websocket event ,maybe a better way to do this? ¯\_(ツ)_/¯
 	self.guilds = {}
-
+	self.heartbeatInterval = 45
 	rateLimiter[self.cid] = {}
 
 	self.ws = self.WS.Client(discordlib.endpoints.gateway, 443)
@@ -127,11 +127,11 @@ function discordlib:Heartbeat()
 end
 
 -- Make it emit the heartbeat websocket event every 20sec to not get disconnected
-function discordlib:StartHeartbeat()
+function discordlib:StartHeartbeat(int)
 	if not self.ws:IsActive() then
 		return false
 	end
-	timer.Create( "discordHeartbeat"..self.cid, 45, 0, function() 
+	timer.Create( "discordHeartbeat"..self.cid, self.heartbeatInterval, 0, function() 
 		if not self:IsConnected() then
 				timer.Destroy("discordHeartbeat"..self.cid)
 		else
@@ -147,7 +147,7 @@ function discordlib:HandlePayload(msg)
 	payload.d._client = self
 
 	if self.debug then
-		print("DLib: Getting OP / package code: "..payload.op.." / "..payload.t)
+		print("DLib: Getting OP: "..payload.op)
 	end
 
 	local op = payload.op
@@ -156,6 +156,8 @@ function discordlib:HandlePayload(msg)
 		self:HandleMessage(payload)
 	elseif op == 1 then
 		self:Heartbeat()
+	elseif op == 10 then
+		self.heartbeatInterval = payload.d["heartbeat_interval"]/1000
 	end
 
 end
