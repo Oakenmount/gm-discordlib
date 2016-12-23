@@ -11,7 +11,7 @@ discordlib.currid = discordlib.currid or 1
 
 discordlib.endpoints = {}
 discordlib.endpoints.base = "https://discordapp.com/api"
-discordlib.endpoints.gateway = "wss://gateway.discord.gg/"
+discordlib.endpoints.gateway = "wss://gateway.discord.gg"
 discordlib.endpoints.users = discordlib.endpoints.base.."/users"
 discordlib.endpoints.guilds = discordlib.endpoints.base.."/guilds"
 discordlib.endpoints.channels = discordlib.endpoints.base.."/channels"
@@ -39,7 +39,7 @@ function discordlib:CreateClient()
 	self.cid = discordlib.currid
 
 	self.autoreconnect = true -- Let's make this the default
-
+	self.last_seq = nil
 	self.debug = false
 	self.events = {}
 	-- Let's cache basic guilds and roles data and update them on websocket event ,maybe a better way to do this? ¯\_(ツ)_/¯
@@ -50,15 +50,19 @@ function discordlib:CreateClient()
 	self.ws = self.WS.Client(discordlib.endpoints.gateway, 443)
 
 	self.ws:on("open", function()
-			self:Auth()
-			self:StartHeartbeat()
+			timer.Simple(0, function()
+				self:Auth()
+			end)
 	end)
 		
 	self.ws:on("message", function(msg)
-		self:HandleMessage(msg)
+		self:HandlePayload(msg)
 	end)
 		
 	self.ws:on("close", function()
+		if self.debug then
+			print("DLib: Websocket disconnected")
+		end
 		self:fireEvent("disconnected")
 	end)
 
@@ -111,9 +115,13 @@ end
 
 -- Emit the heartbeant event
 function discordlib:Heartbeat()
+	if self.debug then
+		print("DLib: Sending heartbeat with sequence: "..self.last_seq)
+	end
+
 	local payload = {
 		["op"] = 1,
-		["d"] = os.time()
+		["d"] = self.last_seq or nil
 	}
 	self.ws:Send(util.TableToJSON(payload))
 end
@@ -123,7 +131,7 @@ function discordlib:StartHeartbeat()
 	if not self.ws:IsActive() then
 		return false
 	end
-	timer.Create( "discordHeartbeat"..self.cid, 20, 0, function() 
+	timer.Create( "discordHeartbeat"..self.cid, 45, 0, function() 
 		if not self:IsConnected() then
 				timer.Destroy("discordHeartbeat"..self.cid)
 		else
@@ -132,49 +140,66 @@ function discordlib:StartHeartbeat()
 	end)
 end
 
-function discordlib:HandleMessage(msg)
-	local tbl = util.JSONToTable(msg)
+function discordlib:HandlePayload(msg)
+	local payload = util.JSONToTable(msg)
+	
+	payload.d = payload.d or {}
+	payload.d._client = self
 
-	tbl.d = tbl.d or {}
-	tbl.d._client = self
+	if self.debug then
+		print("DLib: Getting OP / package code: "..payload.op.." / "..payload.t)
+	end
 
-	if tbl.t == "READY" then
-		self.bot = discordlib.meta.user:ParseUserObj(tbl.d.user)
-		self.id = tbl.d.user.id
-		self.username = tbl.d.user.username
-		self.session_id = tbl.d.session_id
+	local op = payload.op
+
+	if op == 0 then
+		self:HandleMessage(payload)
+	elseif op == 1 then
+		self:Heartbeat()
+	end
+
+end
+
+function discordlib:HandleMessage(payload)
+	self.last_seq = payload.s
+	if payload.t == "READY" then
+		self.bot = discordlib.meta.user:ParseUserObj(payload.d.user)
+		self.id = payload.d.user.id
+		self.username = payload.d.user.username
+		self.session_id = payload.d.session_id
+		self:StartHeartbeat()
 		self:fireEvent("ready")
 
-	elseif tbl.t == "MESSAGE_CREATE" then
-		self:fireEvent("message", discordlib.meta.message:ParseMessageCreate(tbl.d), self)
+	elseif payload.t == "MESSAGE_CREATE" then
+		self:fireEvent("message", discordlib.meta.message:ParseMessageCreate(payload.d), self)
 
-	elseif tbl.t == "GUILD_CREATE" then
-		local guild = discordlib.meta.guild:ParseGuildCreate(tbl.d)
+	elseif payload.t == "GUILD_CREATE" then
+		local guild = discordlib.meta.guild:ParseGuildCreate(payload.d)
 		self.guilds[guild.id] = guild
 
-	elseif tbl.t == "GUILD_MEMBER_ADD" then
-		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local guild_member = discordlib.meta.guild_member:ParseGuildMemberObj(tbl.d)
+	elseif payload.t == "GUILD_MEMBER_ADD" then
+		local guild = self:GetGuildByGuildID(payload.d.guild_id)
+		local guild_member = discordlib.meta.guild_member:ParseGuildMemberObj(payload.d)
 		guild.members[guild_member.user.id] = guild_member
 
-	elseif tbl.t == "GUILD_MEMBER_REMOVE" then
-		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
+	elseif payload.t == "GUILD_MEMBER_REMOVE" then
+		local guild = self:GetGuildByGuildID(payload.d.guild_id)
 		if guild then
-			guild.members[tbl.d.user.id] = nil
+			guild.members[payload.d.user.id] = nil
 		end
-	elseif tbl.t == "GUILD_MEMBER_ADD" then
-		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local member = discordlib.meta.guild_member:ParseGuildMemberObj(tbl.d)
+	elseif payload.t == "GUILD_MEMBER_ADD" then
+		local guild = self:GetGuildByGuildID(payload.d.guild_id)
+		local member = discordlib.meta.guild_member:ParseGuildMemberObj(payload.d)
 		member.guild = guild
 		table.insert(guild.members, member)
 
-	elseif tbl.t == "GUILD_MEMBER_UPDATE" then
-		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local userid = tbl.d.user.id
-		guild.members[userid].user = discordlib.meta.user:ParseUserObj(tbl.d.user)
+	elseif payload.t == "GUILD_MEMBER_UPDATE" then
+		local guild = self:GetGuildByGuildID(payload.d.guild_id)
+		local userid = payload.d.user.id
+		guild.members[userid].user = discordlib.meta.user:ParseUserObj(payload.d.user)
 
 		guild.members[userid].roles = {}
-		for k, v in pairs(tbl.d.roles) do
+		for k, v in pairs(payload.d.roles) do
 			local role = self:GetRoleById(v)
 			if role then
 				table.insert(guild.members[userid].roles, role)
@@ -182,6 +207,7 @@ function discordlib:HandleMessage(msg)
 		end
 	end
 end
+
 
 function discordlib:GetChannelByChannelID(id)
 	for k, guild in pairs(self.guilds) do
@@ -233,6 +259,20 @@ end
 
 function discordlib:SendMessage(channelid, msg, cb)
 	local postTbl = {["content"] = msg}
+	self:RunAPIFunc("sendMessage", function()
+		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST", postTbl, nil, function(headers, body)
+			self:SetRateLimitHead("sendMessage", headers)
+			
+			if not cb then return end
+			local tbl = util.JSONToTable(body)
+			tbl.client = self
+			cb(discordlib.meta.message:ParseMessageCreate(tbl, bot))
+		end)
+	end)
+end
+
+function discordlib:SendEmbed(channelid, embed, cb)
+	local postTbl = {["content"] = "", ["embed"] = embed}
 	self:RunAPIFunc("sendMessage", function()
 		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST", postTbl, nil, function(headers, body)
 			self:SetRateLimitHead("sendMessage", headers)
