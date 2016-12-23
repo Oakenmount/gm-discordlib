@@ -1,9 +1,9 @@
 --[[
-Discord Library for Garry's Mod by Datamats
+Discord Library for Garry's Mod Lua by Datamats
 Check the README.md and LICENSE file for more infomation.
 ]]
 
-discordlib = discordlib or {}
+discordlib = discordlib or {meta = {}}
 
 discordlib.__index = discordlib
 
@@ -16,7 +16,8 @@ discordlib.endpoints.users = discordlib.endpoints.base.."/users"
 discordlib.endpoints.guilds = discordlib.endpoints.base.."/guilds"
 discordlib.endpoints.channels = discordlib.endpoints.base.."/channels"
 
-local rateLimiter = {}
+discordlib._rateLimiter = {}
+local rateLimiter = discordlib._rateLimiter
 
 include('libs/websocket.lua')
 include('libs/http.lua')
@@ -135,25 +136,25 @@ function discordlib:HandleMessage(msg)
 	local tbl = util.JSONToTable(msg)
 
 	tbl.d = tbl.d or {}
-	tbl.d.client = self
+	tbl.d._client = self
 
 	if tbl.t == "READY" then
-		self.bot = discordlib.user_meta:ParseUserObj(tbl.d.user)
+		self.bot = discordlib.meta.user:ParseUserObj(tbl.d.user)
 		self.id = tbl.d.user.id
 		self.username = tbl.d.user.username
 		self.session_id = tbl.d.session_id
 		self:fireEvent("ready")
 
 	elseif tbl.t == "MESSAGE_CREATE" then
-		self:fireEvent("message", discordlib.message_meta:ParseMessageCreate(tbl.d), self)
+		self:fireEvent("message", discordlib.meta.message:ParseMessageCreate(tbl.d), self)
 
 	elseif tbl.t == "GUILD_CREATE" then
-		local guild = discordlib.guild_meta:ParseGuildCreate(tbl.d)
+		local guild = discordlib.meta.guild:ParseGuildCreate(tbl.d)
 		self.guilds[guild.id] = guild
 
 	elseif tbl.t == "GUILD_MEMBER_ADD" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local guild_member = discordlib.guild_member_meta:ParseGuildMemberObj(tbl.d)
+		local guild_member = discordlib.meta.guild_member:ParseGuildMemberObj(tbl.d)
 		guild.members[guild_member.user.id] = guild_member
 
 	elseif tbl.t == "GUILD_MEMBER_REMOVE" then
@@ -163,13 +164,14 @@ function discordlib:HandleMessage(msg)
 		end
 	elseif tbl.t == "GUILD_MEMBER_ADD" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
-		local member = discordlib.guild_member_meta:ParseGuildMemberObj(tbl.d)
+		local member = discordlib.meta.guild_member:ParseGuildMemberObj(tbl.d)
+		member.guild = guild
 		table.insert(guild.members, member)
 
 	elseif tbl.t == "GUILD_MEMBER_UPDATE" then
 		local guild = self:GetGuildByGuildID(tbl.d.guild_id)
 		local userid = tbl.d.user.id
-		guild.members[userid].user = discordlib.user_meta:ParseUserObj(tbl.d.user)
+		guild.members[userid].user = discordlib.meta.user:ParseUserObj(tbl.d.user)
 
 		guild.members[userid].roles = {}
 		for k, v in pairs(tbl.d.roles) do
@@ -238,7 +240,7 @@ function discordlib:SendMessage(channelid, msg, cb)
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
 			tbl.client = self
-			cb(discordlib.message_meta:ParseMessageCreate(tbl, bot))
+			cb(discordlib.meta.message:ParseMessageCreate(tbl, bot))
 		end)
 	end)
 end
@@ -274,11 +276,10 @@ end
 
 --The current ratelimiter, not very effective tho.
 
-local lastRateLimit = 0
+local nextRateLimit = 0
 
 hook.Add("Think", "discordRatelimiter", function()
-
-	if SysTime() - lastRateLimit > 0.1 then
+	if SysTime() - nextRateLimit then
 		for k, clientRates in pairs(rateLimiter) do
 			for k, apiType in pairs(clientRates) do
 
@@ -296,6 +297,6 @@ hook.Add("Think", "discordRatelimiter", function()
 			end
 
 		end
-		lastRateLimit = SysTime()
+		nextRateLimit = SysTime() + .1
 	end
 end)

@@ -1,10 +1,10 @@
-discordlib.role_meta = discordlib.role_meta or {}
+discordlib.meta.role = discordlib.meta.role or {}
 
-discordlib.role_meta.__index = discordlib.role_meta
+discordlib.meta.role.__index = discordlib.meta.role
 
-function discordlib.role_meta:ParseRoleObj(tbl)
+function discordlib.meta.role:ParseRoleObj(tbl)
 
-	local self = setmetatable({}, discordlib.role_meta)
+	local self = setmetatable({}, discordlib.meta.role)
 
 	self.id = tbl.id
 	self.name = tbl.name

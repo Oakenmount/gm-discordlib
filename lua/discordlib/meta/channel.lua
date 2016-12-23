@@ -1,10 +1,12 @@
-discordlib.channel_meta = discordlib.channel_meta or {}
+discordlib.meta.channel = discordlib.meta.channel or {}
 
-discordlib.channel_meta.__index = discordlib.channel_meta
+discordlib.meta.channel.__index = discordlib.meta.channel
 
-function discordlib.channel_meta:ParseChannelObj(tbl)
+function discordlib.meta.channel:ParseChannelObj(tbl)
 
-	local self = setmetatable({}, discordlib.channel_meta)
+	local self = setmetatable({}, discordlib.meta.channel)
+
+	self._client = tbl.client
 
 	self.id = tbl.id
 	self.name = tbl.name
@@ -20,6 +22,11 @@ function discordlib.channel_meta:ParseChannelObj(tbl)
 
 end
 
-function discordlib.channel_meta:GetGuild()
-	return self.bot:GetGuildByChannelID(self.id)
+function discordlib.meta.channel:GetGuild()
+	return self._client:GetGuildByChannelID(self.id)
+end
+
+function discordlib.meta.channel:SendMessage(msg, cb)
+		self._client:SendMessage(self.id, msg, cb)
+
 end

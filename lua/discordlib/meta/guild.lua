@@ -1,12 +1,12 @@
-discordlib.guild_meta = discordlib.guild_meta or {}
+discordlib.meta.guild = discordlib.meta.guild or {}
 
-discordlib.guild_meta.__index = discordlib.guild_meta
+discordlib.meta.guild.__index = discordlib.meta.guild
 
-function discordlib.guild_meta:ParseGuildCreate(tbl)
+function discordlib.meta.guild:ParseGuildCreate(tbl)
 
-	local self = setmetatable({}, discordlib.guild_meta)
+	local self = setmetatable({}, discordlib.meta.guild)
 
-	self.client = tbl.client
+	self._client = tbl._client
 	self.id = tbl.id
 	self.name = tbl.name
 	self.icon = tbl.icon
@@ -31,22 +31,23 @@ function discordlib.guild_meta:ParseGuildCreate(tbl)
 	self.members = {}
 
 	for k, v in pairs(tbl.roles) do
-		local role = discordlib.role_meta:ParseRoleObj(v)
+		local role = discordlib.meta.role:ParseRoleObj(v)
 		self.roles[role.id] = role
 	end
 
-	self.client.guilds[self.id] = self -- Just temp pass for the other functions to get the data about roles
+	self._client.guilds[self.id] = self -- Just temp pass for the other functions to get the data about roles
 
 	for k, v in pairs(tbl.members or {}) do
 
-		v.client = self.client -- Pass it
-		local member = discordlib.guild_member_meta:ParseGuildMemberObj(v)
+		v._client = self._client -- Pass it
+		local member = discordlib.meta.guild_member:ParseGuildMemberObj(v)
+		member.guild = self
 		self.members[member.user.id] = member
 	end
 
 
 	for k, v in pairs(tbl.channels or {}) do
-		local channel = discordlib.channel_meta:ParseChannelObj(v)
+		local channel = discordlib.meta.channel:ParseChannelObj(v)
 		self.channels[channel.id] = channel
 	end
 

@@ -1,18 +1,18 @@
-discordlib.message_meta = discordlib.message_meta or {}
+discordlib.meta.message = discordlib.meta.message or {}
 
-discordlib.message_meta.__index = discordlib.message_meta
+discordlib.meta.message.__index = discordlib.meta.message
 
-function discordlib.message_meta:ParseMessageCreate(tbl)
+function discordlib.meta.message:ParseMessageCreate(tbl)
 
-	local self = setmetatable({}, discordlib.message_meta)
+	local self = setmetatable({}, discordlib.meta.message)
 
-	self.client = tbl.client
+	self._client = tbl._client
 
 	self.id = tbl.id
 	self.type = tbl.type
 	self.content = tbl.content
 	self.channel_id = tbl.channel_id
-	self.author = discordlib.user_meta:ParseUserObj(tbl.author)
+	self.author = discordlib.meta.user:ParseUserObj(tbl.author)
 
 	self.tts = tbl.tts
 	self.timestamp = tbl.timestamp
@@ -26,84 +26,84 @@ function discordlib.message_meta:ParseMessageCreate(tbl)
 
 end
 
-function discordlib.message_meta:Reply(msg, cb)
-		self.client:SendMessage(self.channel_id, msg, cb)
+function discordlib.meta.message:Reply(msg, cb)
+		self._client:SendMessage(self.channel_id, msg, cb)
 
 end
 
-function discordlib.message_meta:Edit(msg, cb)
+function discordlib.meta.message:Edit(msg, cb)
 	local payload = util.TableToJSON({["content"] = msg})
-	self.client:RunAPIFunc("editMessage", function()
-		self.client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/messages/"..self.id, "PATCH", nil, payload, function(headers, body)
-			self.client:SetRateLimitHead("editMessage", headers)
+	self._client:RunAPIFunc("editMessage", function()
+		self._client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/messages/"..self.id, "PATCH", nil, payload, function(headers, body)
+			self._client:SetRateLimitHead("editMessage", headers)
 
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
-			tbl.client = self.client
-			cb(discordlib.message_meta:ParseMessageCreate(tbl))
+			tbl._client = self._client
+			cb(discordlib.meta.message:ParseMessageCreate(tbl))
 		end)
 	end)
 
 end
 
-function discordlib.message_meta:Pin(cb)
-	self.client:RunAPIFunc("pinMessage", function()
-		self.client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id, "PUT", nil, nil, function(headers, body)
-			self.client:SetRateLimitHead("pinMessage", headers)
+function discordlib.meta.message:Pin(cb)
+	self._client:RunAPIFunc("pinMessage", function()
+		self._client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id, "PUT", nil, nil, function(headers, body)
+			self._client:SetRateLimitHead("pinMessage", headers)
 			if not cb then return end
 			cb(util.JSONToTable(body))
 		end)
 	end)
 end
 
-function discordlib.message_meta:Unpin(cb)
-	self.client:RunAPIFunc("unpinMessage", function()
-		self.client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id, "DELETE", nil, nil, function(headers, body)
-			self.client:SetRateLimitHead("unpinMessage", headers)
+function discordlib.meta.message:Unpin(cb)
+	self._client:RunAPIFunc("unpinMessage", function()
+		self._client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id, "DELETE", nil, nil, function(headers, body)
+			self._client:SetRateLimitHead("unpinMessage", headers)
 			if not cb then return end
 			cb(util.JSONToTable(body))
 		end)
 	end)
 end
 
-function discordlib.message_meta:Delete()
-	self.client:RunAPIFunc("deleteMessage", function()
-		self.client:APIRequest("https://discordapp.com/api/channels/"..self.channel_id.."/messages/"..self.id, "DELETE", {}, nil, function(headers, body)
-			self.client:SetRateLimitHead("deleteMessage", headers)
+function discordlib.meta.message:Delete()
+	self._client:RunAPIFunc("deleteMessage", function()
+		self._client:APIRequest("https://discordapp.com/api/channels/"..self.channel_id.."/messages/"..self.id, "DELETE", {}, nil, function(headers, body)
+			self._client:SetRateLimitHead("deleteMessage", headers)
 			
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
-			tbl.client = self.client
-			cb(discordlib.message_meta:ParseMessageCreate(tbl, self.client))
+			tbl._client = self._client
+			cb(discordlib.meta.message:ParseMessageCreate(tbl, self._client))
 		end)
 	end)
 
 end
 
 
-function discordlib.message_meta:GetChannel()
-	return self.client:GetChannelByChannelID(self.channel_id)
+function discordlib.meta.message:GetChannel()
+	return self._client:GetChannelByChannelID(self.channel_id)
 
 end
 
-function discordlib.message_meta:IsMentioned(id)
-	if not id then id = self.client.id end
+function discordlib.meta.message:IsMentioned(id)
+	if not id then id = self._client.id end
 
 end
 
-function discordlib.message_meta:GetGuildMember()
-	local guild = self.client:GetGuildByChannelID(self.channel_id)
+function discordlib.meta.message:GetGuildMember()
+	local guild = self._client:GetGuildByChannelID(self.channel_id)
 	if not guild then return false end
 
 	return guild.members[self.author.id] or false
 
 end
 
-function discordlib.message_meta:GetGuild()
-	return self.client:GetGuildByChannelID(self.channel_id)
+function discordlib.meta.message:GetGuild()
+	return self._client:GetGuildByChannelID(self.channel_id)
 
 end
 
-function discordlib.message_meta:GetAuthor()
+function discordlib.meta.message:GetAuthor()
 	return self.author
 end

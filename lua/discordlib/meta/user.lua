@@ -1,10 +1,12 @@
-discordlib.user_meta = discordlib.user_meta or {}
+discordlib.meta.user = discordlib.meta.user or {}
 
-discordlib.user_meta.__index = discordlib.user_meta
+discordlib.meta.user.__index = discordlib.meta.user
 
-function discordlib.user_meta:ParseUserObj(tbl)
+function discordlib.meta.user:ParseUserObj(tbl)
 
-	local self = setmetatable({}, discordlib.user_meta)
+	local self = setmetatable({}, discordlib.meta.user)
+
+	self._client = tbl._client
 
 	self.status = "online"
 	self.username = tbl.username
@@ -18,6 +20,6 @@ function discordlib.user_meta:ParseUserObj(tbl)
 
 end
 
-function discordlib.user_meta:Mention()
+function discordlib.meta.user:Mention()
 	return "<@"..self.id..">"
 end
