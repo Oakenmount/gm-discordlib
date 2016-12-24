@@ -39,6 +39,7 @@ function discordlib:CreateClient()
 	self.cid = discordlib.currid
 
 	self.autoreconnect = true -- Let's make this the default
+	self.authed = false
 	self.last_seq = nil
 	self.debug = false
 	self.events = {}
@@ -69,11 +70,21 @@ function discordlib:CreateWS()
 		if self.debug then
 			print("DLib: Websocket disconnected")
 		end
-		if self.autoreconnect then
+		if self.autoreconnect and self.authed then
 			self:CreateWS()
 			self.ws:Connect()
 		else
 			self:fireEvent("disconnected")
+		end
+	end)
+
+	self.ws:on("close_payload", function(code, payload)
+		if code == 4004 then
+			self.autoreconnect = false
+			self:fireEvent("auth_failure")
+			if self.debug then
+				print("DLib - Authentication failure")
+			end
 		end
 	end)
 end
@@ -179,6 +190,7 @@ end
 function discordlib:HandleMessage(payload)
 	self.last_seq = payload.s
 	if payload.t == "READY" then
+		self.authed = true
 		self.bot = discordlib.meta.user:ParseUserObj(payload.d.user)
 		self.id = payload.d.user.id
 		self.username = payload.d.user.username

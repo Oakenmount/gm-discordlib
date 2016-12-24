@@ -75,7 +75,7 @@ function WS.Client.Create(url,port)
 	self.url_info.port = self.port
 	self.url_info.httphost = self.url_info.host .. ":" .. self.port
 
-	self.websocket = WS.Connection(self.bsock,false,self.url_info)
+	self.websocket = WS.Connection(self.bsock,false,self.url_info, self)
 
 	self.eventListeners = {}
 
@@ -132,10 +132,11 @@ function WS.Client:IsActive()
 	return (wsstate != "CLOSED")
 end
 
-function WS.Connection.Create(bsock,isServer,destination_info) --Takes fully enstablished bromsock and bool for being server
+function WS.Connection.Create(bsock,isServer,destination_info,client) --Takes fully enstablished bromsock and bool for being server
 	--Being server affect handshake order, masking requirements anup close order
 	local self = setmetatable({},WS.Connection)
 
+	self.client = client
 	self.isServer = isServer
 	self.isClient = not self.isServer
 
@@ -799,6 +800,7 @@ function WS.Connection:onCloseMessage(frame) --Handle frame with close opdoe
 		end
 
 		code = (bit.lshift(string.byte(payload[1]),8)+string.byte(payload[2]))
+		self.client:fireEvent("close_payload", code, payload)
 		if(WS.verbose) then
 			print("Received close payload: ".. code .. " - ".. payload)
 		end
