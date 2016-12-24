@@ -47,6 +47,12 @@ function discordlib:CreateClient()
 	self.heartbeatInterval = 45
 	rateLimiter[self.cid] = {}
 
+	self:CreateWS()
+
+	return self
+end
+
+function discordlib:CreateWS()
 	self.ws = self.WS.Client(discordlib.endpoints.gateway, 443)
 
 	self.ws:on("open", function()
@@ -63,10 +69,13 @@ function discordlib:CreateClient()
 		if self.debug then
 			print("DLib: Websocket disconnected")
 		end
-		self:fireEvent("disconnected")
+		if self.autoreconnect then
+			self:CreateWS()
+			self.ws:Connect()
+		else
+			self:fireEvent("disconnected")
+		end
 	end)
-
-	return self
 end
 
 --Will add the token at the start for the connection to the gateway
@@ -86,6 +95,7 @@ end
 
 --Disconnect the current session
 function discordlib:Disconnect()
+	self.autoreconnect = false
 	if self:IsConnected() then
 		timer.Destroy("discordHeartbeat"..self.cid)
 		self.ws:Close()
@@ -133,7 +143,7 @@ function discordlib:StartHeartbeat(int)
 	end
 	timer.Create( "discordHeartbeat"..self.cid, self.heartbeatInterval, 0, function() 
 		if not self:IsConnected() then
-				timer.Destroy("discordHeartbeat"..self.cid)
+			timer.Destroy("discordHeartbeat"..self.cid)
 		else
 			self:Heartbeat()
 		end
@@ -156,6 +166,10 @@ function discordlib:HandlePayload(msg)
 		self:HandleMessage(payload)
 	elseif op == 1 then
 		self:Heartbeat()
+	elseif op == 7 then
+		self.ws:Close()
+	elseif op == 9 then
+		Error("DLib: Invalid session id")
 	elseif op == 10 then
 		self.heartbeatInterval = payload.d["heartbeat_interval"]/1000
 	end
@@ -321,7 +335,7 @@ end
 local nextRateLimit = 0
 
 hook.Add("Think", "discordRatelimiter", function()
-	if SysTime() - nextRateLimit then
+	if SysTime() > nextRateLimit then
 		for k, clientRates in pairs(rateLimiter) do
 			for k, apiType in pairs(clientRates) do
 
