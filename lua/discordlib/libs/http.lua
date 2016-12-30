@@ -32,7 +32,7 @@ function discordlib.HTTPRequest(url, method, headertbl, postdatatbl, patchdata, 
 	
 	if (#path == 0) then path = "/" end
 	
-	if (postdatatbl) then
+	if (postdatatbl and type(postdatatbl) == "table") then
 		for k, v in pairs(postdatatbl) do
 			postdata = postdata .. k .. "=" .. v .. "&"
 		end
@@ -55,7 +55,11 @@ function discordlib.HTTPRequest(url, method, headertbl, postdatatbl, patchdata, 
 			pClient:StartSSLClient()
 		end
 		
-		pPacket:WriteLine(method .. " " .. path .. " HTTP/1.1");
+		if method:lower() == "post_json" then
+			pPacket:WriteLine("POST " .. path .. " HTTP/1.1");
+		else
+			pPacket:WriteLine(method .. " " .. path .. " HTTP/1.1");
+		end
 		pPacket:WriteLine("Host: " .. host);
 
 		for k, v in pairs(headertbl) do
@@ -66,6 +70,9 @@ function discordlib.HTTPRequest(url, method, headertbl, postdatatbl, patchdata, 
 		if (method:lower() == "post") then
 			pPacket:WriteLine("Content-Type: application/x-www-form-urlencoded");
 			pPacket:WriteLine("Content-Length: " .. #postdata);
+		elseif (method:lower() == "post_json") then
+			pPacket:WriteLine("Content-Type: application/x-www-form-urlencoded");
+			pPacket:WriteLine("Content-Length: " .. #postdatatbl);
 		elseif (method:lower() == "patch") then
 			pPacket:WriteLine("Content-Type: application/json");
 			pPacket:WriteLine("Content-Length: " .. #patchdata);
@@ -78,6 +85,8 @@ function discordlib.HTTPRequest(url, method, headertbl, postdatatbl, patchdata, 
 		
 		if (method:lower() == "post") then
 			pPacket:WriteLine(postdata)
+		elseif(method:lower() == "post_json") then
+			pPacket:WriteLine(postdatatbl)
 		elseif (method:lower() == "patch") then
 			pPacket:WriteLine(patchdata)
 		end

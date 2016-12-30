@@ -293,21 +293,21 @@ function discordlib:SendMessage(channelid, msg, cb)
 			
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
-			tbl.client = self
+			tbl._client = self
 			cb(discordlib.meta.message:ParseMessageCreate(tbl, bot))
 		end)
 	end)
 end
 
 function discordlib:SendEmbed(channelid, embed, cb)
-	local postTbl = {["content"] = "", ["embed"] = embed}
+	local postTbl = util.TableToJSON({["embed"] = embed})
 	self:RunAPIFunc("sendMessage", function()
-		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST", postTbl, nil, function(headers, body)
+		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST_JSON", postTbl, nil, function(headers, body)
 			self:SetRateLimitHead("sendMessage", headers)
-			
+
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
-			tbl.client = self
+			tbl._client = self
 			cb(discordlib.meta.message:ParseMessageCreate(tbl, bot))
 		end)
 	end)

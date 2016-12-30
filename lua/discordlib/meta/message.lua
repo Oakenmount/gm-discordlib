@@ -31,6 +31,12 @@ function discordlib.meta.message:Reply(msg, cb)
 
 end
 
+
+function discordlib.meta.message:ReplyEmbed(embed, cb)
+		self._client:SendEmbed(self.channel_id, embed, cb)
+
+end
+
 function discordlib.meta.message:Edit(msg, cb)
 	local payload = util.TableToJSON({["content"] = msg})
 	self._client:RunAPIFunc("editMessage", function()
