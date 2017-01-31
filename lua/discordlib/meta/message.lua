@@ -12,7 +12,7 @@ function discordlib.meta.message:ParseMessageCreate(tbl)
 	self.type = tbl.type
 	self.content = tbl.content
 	self.channel_id = tbl.channel_id
-	self.author = discordlib.meta.user:ParseUserObj(tbl.author)
+	self.author = discordlib.meta.user:ParseUserObj(tbl.author, tbl._client)
 
 	self.tts = tbl.tts
 	self.timestamp = tbl.timestamp
@@ -27,22 +27,22 @@ function discordlib.meta.message:ParseMessageCreate(tbl)
 end
 
 function discordlib.meta.message:Reply(msg, cb)
-		self._client:SendMessage(self.channel_id, msg, cb)
+		self._client:CreateMessage(self.channel_id, msg, cb)
 
 end
 
-
-function discordlib.meta.message:ReplyEmbed(embed, cb)
-		self._client:SendEmbed(self.channel_id, embed, cb)
-
-end
-
+--[[
+HTTP function dosnt support patch yet
 function discordlib.meta.message:Edit(msg, cb)
 	local payload = util.TableToJSON({["content"] = msg})
-	self._client:RunAPIFunc("editMessage", function()
-		self._client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/messages/"..self.id, "PATCH", nil, payload, function(headers, body)
-			self._client:SetRateLimitHead("editMessage", headers)
+	self._client:RunAPIFunc("EditMessage", function()
 
+		self._client:APIRequest({
+			["method"] = "patch",
+			["url"] = discordlib.endpoints.channels.."/"..self.channel_id.."/messages/"..self.id,
+			["body"] = payload
+		}, function(headers, body)
+			self._client:SetRateLimitHead("EditMessage", headers)
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
 			tbl._client = self._client
@@ -51,11 +51,15 @@ function discordlib.meta.message:Edit(msg, cb)
 	end)
 
 end
+]]
 
 function discordlib.meta.message:Pin(cb)
-	self._client:RunAPIFunc("pinMessage", function()
-		self._client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id, "PUT", nil, nil, function(headers, body)
-			self._client:SetRateLimitHead("pinMessage", headers)
+	self._client:RunAPIFunc("PinMessages", function()
+		self._client:APIRequest({
+			["method"] = "put",
+			["url"] = discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id
+		}, function(headers, body)
+			self._client:SetRateLimitHead("PinMessages", headers)
 			if not cb then return end
 			cb(util.JSONToTable(body))
 		end)
@@ -63,9 +67,12 @@ function discordlib.meta.message:Pin(cb)
 end
 
 function discordlib.meta.message:Unpin(cb)
-	self._client:RunAPIFunc("unpinMessage", function()
-		self._client:APIRequest(discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id, "DELETE", nil, nil, function(headers, body)
-			self._client:SetRateLimitHead("unpinMessage", headers)
+	self._client:RunAPIFunc("UnpinMessages", function()
+		self._client:APIRequest({
+			["method"] = "delete",
+			["url"] = discordlib.endpoints.channels.."/"..self.channel_id.."/pins/"..self.id
+		}, function(headers, body)
+			self._client:SetRateLimitHead("UnpinMessages", headers)
 			if not cb then return end
 			cb(util.JSONToTable(body))
 		end)
@@ -73,17 +80,18 @@ function discordlib.meta.message:Unpin(cb)
 end
 
 function discordlib.meta.message:Delete()
-	self._client:RunAPIFunc("deleteMessage", function()
-		self._client:APIRequest("https://discordapp.com/api/channels/"..self.channel_id.."/messages/"..self.id, "DELETE", {}, nil, function(headers, body)
-			self._client:SetRateLimitHead("deleteMessage", headers)
-			
+	self._client:RunAPIFunc("DeleteMessages", function()
+		self._client:APIRequest({
+			["method"] = "delete",
+			["url"] = "https://discordapp.com/api/channels/"..self.channel_id.."/messages/"..self.id
+		}, function(headers, body)
+			self._client:SetRateLimitHead("DeleteMessages", headers)
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
 			tbl._client = self._client
 			cb(discordlib.meta.message:ParseMessageCreate(tbl, self._client))
 		end)
 	end)
-
 end
 
 

@@ -10,7 +10,7 @@ discordlib.__index = discordlib
 discordlib.currid = discordlib.currid or 1
 
 discordlib.endpoints = {}
-discordlib.endpoints.base = "https://discordapp.com/api"
+discordlib.endpoints.base = "https://discordapp.com/api/v6"
 discordlib.endpoints.gateway = "wss://gateway.discord.gg/?v=6"
 discordlib.endpoints.users = discordlib.endpoints.base.."/users"
 discordlib.endpoints.guilds = discordlib.endpoints.base.."/guilds"
@@ -191,7 +191,7 @@ function discordlib:HandleMessage(payload)
 	self.last_seq = payload.s
 	if payload.t == "READY" then
 		self.authed = true
-		self.bot = discordlib.meta.user:ParseUserObj(payload.d.user)
+		self.bot = discordlib.meta.user:ParseUserObj(payload.d.user, self)
 		self.id = payload.d.user.id
 		self.username = payload.d.user.username
 		self.session_id = payload.d.session_id
@@ -199,7 +199,7 @@ function discordlib:HandleMessage(payload)
 		self:fireEvent("ready")
 
 	elseif payload.t == "MESSAGE_CREATE" then
-		self:fireEvent("message", discordlib.meta.message:ParseMessageCreate(payload.d), self)
+		self:fireEvent("message", self, discordlib.meta.message:ParseMessageCreate(payload.d))
 
 	elseif payload.t == "GUILD_CREATE" then
 		local guild = discordlib.meta.guild:ParseGuildCreate(payload.d)
@@ -280,31 +280,29 @@ function discordlib:GetRoleById(id)
 	return false
 end
 
-function discordlib:APIRequest(url, method, posttbl, patchdata, callback)
-	local headtbl = {["Authorization"]="Bot "..self.token, ["Content-Type"]="application/json"}
-	self.HTTPRequest(url, method, headtbl, posttbl, patchdata, callback)
+function discordlib:APIRequest(msg, callback)
+	msg["headers"] = {["Authorization"]="Bot "..self.token, ["Content-Type"]="application/json"}
+	self.HTTPRequest(msg, callback)
 end
 
-function discordlib:SendMessage(channelid, msg, cb)
-	local postTbl = {["content"] = msg}
-	self:RunAPIFunc("sendMessage", function()
-		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST", postTbl, nil, function(headers, body)
-			self:SetRateLimitHead("sendMessage", headers)
+function discordlib:CreateMessage(channelid, msg, cb)
+	local res;
+	if type(msg) == "string" then
+		res = util.TableToJSON({["content"] = msg})
+	elseif type(msg) == "table" then
+		res = util.TableToJSON(msg)
+	else
+		return print("DLib: Attempting to send a message that is not a string or table!")
+	end
+
+	self:RunAPIFunc("CreateMessage", function()
+		self:APIRequest({
+			["method"] = "post",
+			["url"] = discordlib.endpoints.channels.."/"..channelid.."/messages",
+			["body"] = res
+		}, function(headers, body)
+			self:SetRateLimitHead("CreateMessage", headers)
 			
-			if not cb then return end
-			local tbl = util.JSONToTable(body)
-			tbl._client = self
-			cb(discordlib.meta.message:ParseMessageCreate(tbl, bot))
-		end)
-	end)
-end
-
-function discordlib:SendEmbed(channelid, embed, cb)
-	local postTbl = util.TableToJSON({["embed"] = embed})
-	self:RunAPIFunc("sendMessage", function()
-		self:APIRequest(discordlib.endpoints.channels.."/"..channelid.."/messages", "POST_JSON", postTbl, nil, function(headers, body)
-			self:SetRateLimitHead("sendMessage", headers)
-
 			if not cb then return end
 			local tbl = util.JSONToTable(body)
 			tbl._client = self

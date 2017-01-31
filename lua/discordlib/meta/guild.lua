@@ -31,7 +31,7 @@ function discordlib.meta.guild:ParseGuildCreate(tbl)
 	self.members = {}
 
 	for k, v in pairs(tbl.roles) do
-		local role = discordlib.meta.role:ParseRoleObj(v)
+		local role = discordlib.meta.role:ParseRoleObj(v, tbl._client)
 		self.roles[role.id] = role
 	end
 
@@ -40,14 +40,14 @@ function discordlib.meta.guild:ParseGuildCreate(tbl)
 	for k, v in pairs(tbl.members or {}) do
 
 		v._client = self._client -- Pass it
-		local member = discordlib.meta.guild_member:ParseGuildMemberObj(v)
+		local member = discordlib.meta.guild_member:ParseGuildMemberObj(v, tbl._client)
 		member.guild = self
 		self.members[member.user.id] = member
 	end
 
 
 	for k, v in pairs(tbl.channels or {}) do
-		local channel = discordlib.meta.channel:ParseChannelObj(v)
+		local channel = discordlib.meta.channel:ParseChannelObj(v, tbl._client)
 		self.channels[channel.id] = channel
 	end
 

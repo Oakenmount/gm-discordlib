@@ -6,6 +6,8 @@ function discordlib.meta.role:ParseRoleObj(tbl)
 
 	local self = setmetatable({}, discordlib.meta.role)
 
+	self._client = tbl._client
+
 	self.id = tbl.id
 	self.name = tbl.name
 	self.color = tbl.color

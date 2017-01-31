@@ -7,6 +7,7 @@ function discordlib.meta.guild_member:ParseGuildMemberObj(tbl)
 	local self = setmetatable({}, discordlib.meta.guild_member)
 
 	self._client = tbl._client
+	tbl.user_client = tbl.client
 	self.user = discordlib.meta.user:ParseUserObj(tbl.user)
 	self.nick =	tbl.nick
 	self.joined_at = tbl.joined_at
