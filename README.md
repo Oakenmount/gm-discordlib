@@ -25,7 +25,7 @@ bot:on("ready", function()
 	print("Successfully connected to discord!")
 end)
 
-bot:on("message", function(msg, self)
+bot:on("message", function(self, msg)
 	if msg.author.id == self.id then return end
   
  	if string.find(msg.content, self.bot:Mention().." ping") then
