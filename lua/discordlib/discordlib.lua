@@ -87,6 +87,9 @@ function discordlib:CreateWS()
 			end
 		end
 	end)
+	function self:IsConnected()
+		return self.ws and self.ws:IsActive()
+	end
 end
 
 --Will add the token at the start for the connection to the gateway
@@ -97,11 +100,6 @@ function discordlib:Login(token)
 	if self.debug then
 		print("DLib - Connecting / Loginin")
 	end
-end
-
---If the websocket connection is still active
-function discordlib:IsConnected()
-	return self.ws and self.ws:IsActive()
 end
 
 --Disconnect the current session
